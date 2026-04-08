@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>DC86 Alerts</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: transparent;
+      font-family: 'Segoe UI', 'Arial', sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    .alert-container {
+      position: relative;
+      text-align: center;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .alert-container.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* ── Alert Box ── */
+    .alert-box {
+      background: rgba(15, 15, 20, 0.92);
+      border-radius: 16px;
+      padding: 24px 40px;
+      border: 2px solid;
+      backdrop-filter: blur(12px);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .alert-box::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 300%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
+      animation: sweep 2s ease-in-out;
+    }
+
+    /* ── Alert Types ── */
+    .alert-box.follow {
+      border-color: #9146FF;
+      box-shadow: 0 0 40px rgba(145, 70, 255, 0.3), 0 0 80px rgba(145, 70, 255, 0.1);
+    }
+
+    .alert-box.sub {
+      border-color: #00C8AF;
+      box-shadow: 0 0 40px rgba(0, 200, 175, 0.3), 0 0 80px rgba(0, 200, 175, 0.1);
+    }
+
+    .alert-box.raid {
+      border-color: #EF5350;
+      box-shadow: 0 0 40px rgba(239, 83, 80, 0.3), 0 0 80px rgba(239, 83, 80, 0.1);
+    }
+
+    .alert-box.bits {
+      border-color: #FFD54F;
+      box-shadow: 0 0 40px rgba(255, 213, 79, 0.3), 0 0 80px rgba(255, 213, 79, 0.1);
+    }
+
+    .alert-box.giftsub {
+      border-color: #FF80AB;
+      box-shadow: 0 0 40px rgba(255, 128, 171, 0.3), 0 0 80px rgba(255, 128, 171, 0.1);
+    }
+
+    /* ── Icon ── */
+    .alert-icon {
+      font-size: 48px;
+      margin-bottom: 8px;
+      animation: bounceIn 0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+    }
+
+    /* ── Event Type Label ── */
+    .alert-type {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      margin-bottom: 4px;
+    }
+
+    .follow .alert-type { color: #9146FF; }
+    .sub .alert-type { color: #00C8AF; }
+    .raid .alert-type { color: #EF5350; }
+    .bits .alert-type { color: #FFD54F; }
+    .giftsub .alert-type { color: #FF80AB; }
+
+    /* ── Username ── */
+    .alert-username {
+      font-size: 28px;
+      font-weight: 800;
+      color: #ffffff;
+      margin-bottom: 4px;
+      animation: slideUp 0.5s ease-out 0.2s both;
+    }
+
+    /* ── Message ── */
+    .alert-message {
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.6);
+      animation: slideUp 0.5s ease-out 0.3s both;
+    }
+
+    /* ── Particles ── */
+    .particles {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      pointer-events: none;
+    }
+
+    .particle {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      animation: particleExplode 1s ease-out forwards;
+    }
+
+    /* ── Entrance/Exit Animations ── */
+    .alert-container.enter {
+      animation: alertEnter 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .alert-container.exit {
+      animation: alertExit 0.5s ease-in forwards;
+    }
+
+    @keyframes alertEnter {
+      from { opacity: 0; transform: scale(0.5) translateY(30px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    @keyframes alertExit {
+      from { opacity: 1; transform: scale(1) translateY(0); }
+      to { opacity: 0; transform: scale(0.8) translateY(-20px); }
+    }
+
+    @keyframes bounceIn {
+      from { transform: scale(0); }
+      50% { transform: scale(1.2); }
+      to { transform: scale(1); }
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes sweep {
+      from { left: -100%; }
+      to { left: 100%; }
+    }
+
+    @keyframes particleExplode {
+      from { transform: translate(0, 0) scale(1); opacity: 1; }
+      to { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="alert-container" id="alertContainer">
+  <div class="alert-box" id="alertBox">
+    <div class="particles" id="particles"></div>
+    <div class="alert-icon" id="alertIcon">💜</div>
+    <div class="alert-type" id="alertType">NEW FOLLOWER</div>
+    <div class="alert-username" id="alertUsername">Username</div>
+    <div class="alert-message" id="alertMessage">Willkommen im Stream!</div>
+  </div>
+</div>
+
+<script>
+  /**
+   * DC86 Alert Widget
+   *
+   * URL Parameter:
+   *   ?duration=5000          - Anzeigedauer in ms
+   *   ?api=ws://...           - WebSocket für Live-Alerts
+   *   ?test=follow            - Test-Alert anzeigen (follow/sub/raid/bits/giftsub)
+   *   ?sound=true             - Sound abspielen (braucht Audio-Dateien)
+   */
+
+  const params = new URLSearchParams(window.location.search);
+  const config = {
+    duration: parseInt(params.get('duration')) || 5000,
+    wsUrl: params.get('api') || null,
+    testType: params.get('test') || null,
+  };
+
+  // ── Alert Configs ──
+  const alertTypes = {
+    follow: {
+      icon: '💜',
+      type: 'NEW FOLLOWER',
+      message: 'Willkommen im Stream!',
+      colors: ['#9146FF', '#B388FF', '#7C4DFF'],
+    },
+    sub: {
+      icon: '⭐',
+      type: 'NEW SUB',
+      message: 'Danke für den Support!',
+      colors: ['#00C8AF', '#64FFDA', '#00BFA5'],
+    },
+    raid: {
+      icon: '⚔️',
+      type: 'INCOMING RAID',
+      message: '{count} Viewer stürmen den Channel!',
+      colors: ['#EF5350', '#FF8A80', '#E53935'],
+    },
+    bits: {
+      icon: '💎',
+      type: 'BITS',
+      message: '{count} Bits! Absolute Legende!',
+      colors: ['#FFD54F', '#FFF176', '#FFB300'],
+    },
+    giftsub: {
+      icon: '🎁',
+      type: 'GIFT SUB',
+      message: '{count}x Sub(s) verschenkt!',
+      colors: ['#FF80AB', '#FF4081', '#F50057'],
+    },
+  };
+
+  // ── DOM ──
+  const container = document.getElementById('alertContainer');
+  const alertBox = document.getElementById('alertBox');
+  const iconEl = document.getElementById('alertIcon');
+  const typeEl = document.getElementById('alertType');
+  const usernameEl = document.getElementById('alertUsername');
+  const messageEl = document.getElementById('alertMessage');
+  const particlesEl = document.getElementById('particles');
+
+  let alertQueue = [];
+  let isShowing = false;
+
+  // ── Particles ──
+  function createParticles(colors) {
+    particlesEl.innerHTML = '';
+    for (let i = 0; i < 20; i++) {
+      const p = document.createElement('div');
+      p.className = 'particle';
+      const angle = (Math.PI * 2 * i) / 20;
+      const distance = 60 + Math.random() * 80;
+      p.style.setProperty('--tx', `${Math.cos(angle) * distance}px`);
+      p.style.setProperty('--ty', `${Math.sin(angle) * distance}px`);
+      p.style.background = colors[Math.floor(Math.random() * colors.length)];
+      p.style.animationDelay = `${Math.random() * 0.3}s`;
+      particlesEl.appendChild(p);
+    }
+  }
+
+  // ── Alert anzeigen ──
+  function showAlert(type, username, extra = {}) {
+    alertQueue.push({ type, username, extra });
+    processQueue();
+  }
+
+  function processQueue() {
+    if (isShowing || alertQueue.length === 0) return;
+    isShowing = true;
+
+    const { type, username, extra } = alertQueue.shift();
+    const alertConfig = alertTypes[type] || alertTypes.follow;
+
+    // Content setzen
+    iconEl.textContent = alertConfig.icon;
+    typeEl.textContent = alertConfig.type;
+    usernameEl.textContent = username;
+
+    let msg = alertConfig.message;
+    if (extra.count) msg = msg.replace('{count}', extra.count);
+    if (extra.message) msg = extra.message;
+    messageEl.textContent = msg;
+
+    // Styling
+    alertBox.className = `alert-box ${type}`;
+    createParticles(alertConfig.colors);
+
+    // Einblenden
+    container.classList.remove('exit');
+    container.classList.add('visible', 'enter');
+
+    // Nach Duration ausblenden
+    setTimeout(() => {
+      container.classList.remove('enter');
+      container.classList.add('exit');
+
+      setTimeout(() => {
+        container.classList.remove('visible', 'exit');
+        isShowing = false;
+        processQueue();
+      }, 500);
+    }, config.duration);
+  }
+
+  // ── WebSocket Verbindung ──
+  if (config.wsUrl) {
+    function connectWS() {
+      const ws = new WebSocket(config.wsUrl);
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          showAlert(data.type, data.username, {
+            count: data.count,
+            message: data.message,
+          });
+        } catch (err) {
+          console.log('WS Parse Error:', err);
+        }
+      };
+
+      ws.onclose = () => {
+        console.log('WS disconnected, reconnecting in 5s...');
+        setTimeout(connectWS, 5000);
+      };
+
+      ws.onerror = () => ws.close();
+    }
+    connectWS();
+  }
+
+  // ── Test Mode ──
+  if (config.testType) {
+    const testNames = ['DragonSlayer99', 'NightElf_Mage', 'WoWLegend', 'DC86Fan', 'LootGoblin'];
+    const randomName = testNames[Math.floor(Math.random() * testNames.length)];
+
+    setTimeout(() => {
+      showAlert(config.testType, randomName, { count: '42' });
+    }, 1000);
+  }
+
+  // ── Demo: Klick zum Testen ──
+  if (!config.wsUrl && !config.testType) {
+    const types = Object.keys(alertTypes);
+    let typeIndex = 0;
+    const demoNames = ['DragonSlayer99', 'NightElf_Mage', 'WoWLegend', 'DC86Fan', 'AzerothHero'];
+
+    document.addEventListener('click', () => {
+      const type = types[typeIndex % types.length];
+      const name = demoNames[Math.floor(Math.random() * demoNames.length)];
+      showAlert(type, name, { count: Math.floor(Math.random() * 100) + 1 });
+      typeIndex++;
+    });
+  }
+</script>
+
+</body>
+</html>

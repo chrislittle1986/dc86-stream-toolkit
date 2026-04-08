@@ -1,0 +1,20 @@
+# ── FastAPI + Server ──
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+
+# ── Datenbank ──
+sqlalchemy[asyncio]==2.0.36
+asyncpg==0.30.0
+alembic==1.14.0
+
+# ── Redis ──
+redis[hiredis]==5.2.1
+
+# ── Auth & Security ──
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+httpx==0.28.1
+
+# ── Config ──
+pydantic-settings==2.7.0
+python-dotenv==1.0.1

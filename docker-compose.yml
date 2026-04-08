@@ -1,0 +1,98 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: dc86-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-dc86}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-dc86secret}
+      POSTGRES_DB: ${DB_NAME:-dc86_toolkit}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-dc86} -d ${DB_NAME:-dc86_toolkit}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: dc86-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: dc86-backend
+    restart: unless-stopped
+    environment:
+      PYTHONUNBUFFERED: "1"
+      DATABASE_URL: postgresql+asyncpg://${DB_USER:-dc86}:${DB_PASSWORD:-dc86secret}@db:5432/${DB_NAME:-dc86_toolkit}
+      REDIS_URL: redis://redis:6379/0
+      TWITCH_CLIENT_ID: ${TWITCH_CLIENT_ID}
+      TWITCH_CLIENT_SECRET: ${TWITCH_CLIENT_SECRET}
+      TWITCH_REDIRECT_URI: ${TWITCH_REDIRECT_URI:-http://localhost:8000/api/auth/callback}
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-production-bitte}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/app:/app/app
+      - ./overlays:/app/overlays
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: dc86-frontend
+    restart: unless-stopped
+    environment:
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend/src:/app/src
+    depends_on:
+      - backend
+
+  bot:
+    build:
+      context: ./bot
+      dockerfile: Dockerfile
+    container_name: dc86-bot
+    restart: unless-stopped
+    environment:
+      PYTHONUNBUFFERED: "1"
+      TWITCH_BOT_TOKEN: ${TWITCH_BOT_TOKEN}
+      TWITCH_CHANNEL: ${TWITCH_CHANNEL:-derchrist}
+      BOT_PREFIX: ${BOT_PREFIX:-!}
+      REDIS_URL: redis://redis:6379/0
+      API_URL: http://backend:8000
+    volumes:
+      - ./bot:/app
+    depends_on:
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_started
+
+volumes:
+  pgdata:
+  redisdata:

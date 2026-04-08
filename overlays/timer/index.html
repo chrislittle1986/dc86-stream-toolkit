@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>DC86 Arcane Timer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=MedievalSharp&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: transparent;
+      font-family: 'MedievalSharp', serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    .timer-container {
+      position: relative;
+      text-align: center;
+      padding: 28px 48px;
+      background: radial-gradient(ellipse at center, #1a0a2e 0%, #0d0518 70%, #05010d 100%);
+      border-radius: 16px;
+      border: 1px solid rgba(138, 43, 226, 0.3);
+      overflow: hidden;
+      animation: containerFadeIn 1s ease-out;
+    }
+
+    .timer-container::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 350px;
+      height: 350px;
+      transform: translate(-50%, -50%);
+      background: radial-gradient(circle, rgba(138, 43, 226, 0.15) 0%, transparent 70%);
+      pointer-events: none;
+      animation: glowPulse 4s ease-in-out infinite;
+    }
+
+    .timer-container::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      border-radius: 16px;
+      border: 1px solid rgba(138, 43, 226, 0.15);
+      pointer-events: none;
+      animation: borderShimmer 3s ease-in-out infinite;
+    }
+
+    .rune {
+      position: absolute;
+      font-size: 18px;
+      opacity: 0;
+      color: rgba(138, 43, 226, 0.25);
+      font-family: 'MedievalSharp', serif;
+      pointer-events: none;
+      animation: runeFloat 8s ease-in-out infinite;
+    }
+    .rune:nth-child(1) { top: 12%; left: 6%; animation-delay: 0s; font-size: 22px; }
+    .rune:nth-child(2) { top: 65%; right: 8%; animation-delay: -2s; font-size: 16px; }
+    .rune:nth-child(3) { bottom: 12%; left: 12%; animation-delay: -4s; font-size: 20px; }
+    .rune:nth-child(4) { top: 20%; right: 15%; animation-delay: -6s; font-size: 14px; }
+    .rune:nth-child(5) { bottom: 25%; right: 20%; animation-delay: -1s; font-size: 18px; }
+    .rune:nth-child(6) { top: 45%; left: 5%; animation-delay: -3s; font-size: 15px; }
+
+    .orb {
+      position: absolute;
+      width: 4px; height: 4px;
+      background: rgba(180, 120, 255, 0.6);
+      border-radius: 50%;
+      pointer-events: none;
+      animation: orbDrift 6s ease-in-out infinite;
+    }
+    .orb:nth-child(7) { top: 30%; left: 15%; animation-delay: 0s; }
+    .orb:nth-child(8) { top: 60%; right: 12%; animation-delay: -2s; width: 3px; height: 3px; }
+    .orb:nth-child(9) { bottom: 35%; left: 30%; animation-delay: -4s; width: 5px; height: 5px; }
+    .orb:nth-child(10) { top: 15%; right: 30%; animation-delay: -1s; width: 2px; height: 2px; }
+    .orb:nth-child(11) { bottom: 20%; right: 35%; animation-delay: -3s; }
+
+    .timer-label {
+      font-size: 14px;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      color: rgba(196, 144, 255, 0.6);
+      font-family: 'MedievalSharp', serif;
+      margin-bottom: 12px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .timer-display {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .time-block {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .time-value {
+      font-family: 'Cinzel Decorative', serif;
+      font-size: 64px;
+      font-weight: 900;
+      min-width: 90px;
+      text-align: center;
+      background: linear-gradient(180deg, #f0d0ff 0%, #c080f0 40%, #8a40d0 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      filter: drop-shadow(0 0 20px rgba(138, 43, 226, 0.7)) drop-shadow(0 0 40px rgba(138, 43, 226, 0.3));
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+      transition: all 0.3s ease;
+    }
+
+    .time-unit {
+      font-size: 10px;
+      color: rgba(138, 43, 226, 0.45);
+      font-family: 'MedievalSharp', serif;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    .time-separator {
+      font-family: 'Cinzel Decorative', serif;
+      font-size: 40px;
+      font-weight: 700;
+      color: rgba(138, 43, 226, 0.5);
+      animation: sepPulse 1s ease-in-out infinite;
+      margin: 0 2px;
+      padding-bottom: 14px;
+    }
+
+    /* ── Warning (< 60s) ── */
+    .timer-container.warning .time-value {
+      background: linear-gradient(180deg, #ffe0a0, #f0a030, #cc6600);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      filter: drop-shadow(0 0 20px rgba(255, 160, 40, 0.7)) drop-shadow(0 0 40px rgba(255, 160, 40, 0.3));
+    }
+    .timer-container.warning .time-separator { color: rgba(255, 160, 40, 0.5); }
+    .timer-container.warning .timer-label { color: rgba(255, 200, 120, 0.6); }
+    .timer-container.warning::before { background: radial-gradient(circle, rgba(255, 140, 20, 0.12) 0%, transparent 70%); }
+
+    /* ── Critical (< 10s) ── */
+    .timer-container.critical .time-value {
+      background: linear-gradient(180deg, #ff9090, #ee4040, #aa0000);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      filter: drop-shadow(0 0 25px rgba(255, 60, 60, 0.8)) drop-shadow(0 0 50px rgba(255, 60, 60, 0.4));
+      animation: criticalPulse 0.5s ease-in-out infinite;
+    }
+    .timer-container.critical .time-separator { color: rgba(255, 60, 60, 0.5); }
+    .timer-container.critical .timer-label { color: rgba(255, 120, 120, 0.6); }
+    .timer-container.critical::before { background: radial-gradient(circle, rgba(255, 40, 40, 0.12) 0%, transparent 70%); }
+
+    /* ── Finished ── */
+    .timer-container.finished .time-value {
+      background: linear-gradient(180deg, #a0ffcc, #40dd88, #10aa55);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      filter: drop-shadow(0 0 20px rgba(40, 220, 120, 0.7)) drop-shadow(0 0 40px rgba(40, 220, 120, 0.3));
+    }
+    .timer-container.finished .time-separator { color: rgba(40, 220, 120, 0.5); }
+    .timer-container.finished::before { background: radial-gradient(circle, rgba(40, 220, 120, 0.12) 0%, transparent 70%); }
+
+    .finished-message {
+      display: none;
+      font-family: 'Cinzel Decorative', serif;
+      font-size: 22px;
+      font-weight: 700;
+      margin-top: 16px;
+      position: relative;
+      z-index: 1;
+      background: linear-gradient(180deg, #a0ffcc, #40dd88);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      filter: drop-shadow(0 0 15px rgba(40, 220, 120, 0.6));
+      animation: finishedBounce 0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+    }
+    .timer-container.finished .finished-message { display: block; }
+
+    /* ── Compact ── */
+    .timer-container.compact { padding: 18px 32px; }
+    .timer-container.compact .time-value { font-size: 44px; min-width: 64px; }
+    .timer-container.compact .time-separator { font-size: 28px; }
+    .timer-container.compact .timer-label { font-size: 12px; }
+
+    /* ── Minimal ── */
+    .timer-container.minimal { padding: 14px 28px; }
+    .timer-container.minimal .time-value { font-size: 38px; min-width: 52px; }
+    .timer-container.minimal .time-unit { display: none; }
+    .timer-container.minimal .time-separator { font-size: 24px; }
+    .timer-container.minimal .timer-label { font-size: 11px; margin-bottom: 8px; }
+
+    .time-value.tick { animation: tickFlash 0.3s ease-out; }
+
+    @keyframes containerFadeIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+    @keyframes glowPulse { 0%,100% { opacity: 0.8; transform: translate(-50%,-50%) scale(1); } 50% { opacity: 1; transform: translate(-50%,-50%) scale(1.1); } }
+    @keyframes borderShimmer { 0%,100% { border-color: rgba(138,43,226,0.15); } 50% { border-color: rgba(138,43,226,0.35); } }
+    @keyframes runeFloat { 0%,100% { opacity: 0; transform: translateY(0) rotate(0deg) scale(0.8); } 15% { opacity: 0.25; } 50% { opacity: 0.15; transform: translateY(-12px) rotate(10deg) scale(1); } 85% { opacity: 0.25; } }
+    @keyframes orbDrift { 0%,100% { opacity: 0.3; transform: translate(0,0); } 25% { opacity: 0.7; transform: translate(8px,-12px); } 50% { opacity: 0.4; transform: translate(-5px,-8px); } 75% { opacity: 0.8; transform: translate(10px,4px); } }
+    @keyframes sepPulse { 0%,100% { opacity: 0.6; } 50% { opacity: 0.2; } }
+    @keyframes criticalPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.04); } }
+    @keyframes tickFlash { 0% { filter: drop-shadow(0 0 30px rgba(138,43,226,1)) drop-shadow(0 0 60px rgba(138,43,226,0.6)); } 100% { filter: drop-shadow(0 0 20px rgba(138,43,226,0.7)) drop-shadow(0 0 40px rgba(138,43,226,0.3)); } }
+    @keyframes finishedBounce { from { opacity: 0; transform: scale(0.3); } to { opacity: 1; transform: scale(1); } }
+  </style>
+</head>
+<body>
+
+<div class="timer-container" id="timerContainer">
+  <span class="rune">&#10041;</span>
+  <span class="rune">&#10039;</span>
+  <span class="rune">&#10038;</span>
+  <span class="rune">&#10040;</span>
+  <span class="rune">&#10037;</span>
+  <span class="rune">&#10042;</span>
+  <span class="orb"></span>
+  <span class="orb"></span>
+  <span class="orb"></span>
+  <span class="orb"></span>
+  <span class="orb"></span>
+
+  <div class="timer-label" id="timerLabel">Stream startet in</div>
+  <div class="timer-display">
+    <div class="time-block" id="hoursBlock">
+      <div class="time-value" id="hours">00</div>
+      <div class="time-unit">Std</div>
+    </div>
+    <span class="time-separator" id="sep1">:</span>
+    <div class="time-block">
+      <div class="time-value" id="minutes">00</div>
+      <div class="time-unit">Min</div>
+    </div>
+    <span class="time-separator">:</span>
+    <div class="time-block">
+      <div class="time-value" id="seconds">00</div>
+      <div class="time-unit">Sek</div>
+    </div>
+  </div>
+  <div class="finished-message" id="finishedMsg">LET'S GO!</div>
+</div>
+
+<script>
+  const params = new URLSearchParams(window.location.search);
+
+  const config = {
+    label: params.get('label') || 'Stream startet in',
+    finishedText: params.get('finished') || "LET'S GO!",
+    mode: params.get('mode') || 'default',
+    warningAt: parseInt(params.get('warning')) || 60,
+    criticalAt: parseInt(params.get('critical')) || 10,
+    hideOnFinish: params.get('hide') === 'true',
+  };
+
+  let totalSeconds = 0;
+  if (params.get('target')) {
+    const target = new Date(params.get('target'));
+    totalSeconds = Math.max(0, Math.floor((target - new Date()) / 1000));
+  } else if (params.get('minutes')) {
+    totalSeconds = parseInt(params.get('minutes')) * 60;
+  } else if (params.get('seconds')) {
+    totalSeconds = parseInt(params.get('seconds'));
+  } else {
+    totalSeconds = 600;
+  }
+
+  let remaining = totalSeconds;
+
+  const container = document.getElementById('timerContainer');
+  const labelEl = document.getElementById('timerLabel');
+  const hoursEl = document.getElementById('hours');
+  const minutesEl = document.getElementById('minutes');
+  const secondsEl = document.getElementById('seconds');
+  const hoursBlock = document.getElementById('hoursBlock');
+  const sep1 = document.getElementById('sep1');
+  const finishedMsg = document.getElementById('finishedMsg');
+
+  labelEl.textContent = config.label;
+  finishedMsg.textContent = config.finishedText;
+
+  if (config.mode !== 'default') container.classList.add(config.mode);
+  if (totalSeconds < 3600) { hoursBlock.style.display = 'none'; sep1.style.display = 'none'; }
+
+  function triggerTick(el) {
+    el.classList.remove('tick');
+    void el.offsetWidth;
+    el.classList.add('tick');
+  }
+
+  let lastSeconds = -1;
+
+  function updateTimer() {
+    if (remaining <= 0) {
+      container.classList.remove('warning', 'critical');
+      container.classList.add('finished');
+      hoursEl.textContent = '00';
+      minutesEl.textContent = '00';
+      secondsEl.textContent = '00';
+      if (config.hideOnFinish) {
+        setTimeout(() => { container.style.opacity = '0'; container.style.transition = 'opacity 1.5s'; }, 4000);
+      }
+      return;
+    }
+
+    const h = Math.floor(remaining / 3600);
+    const m = Math.floor((remaining % 3600) / 60);
+    const s = remaining % 60;
+
+    hoursEl.textContent = String(h).padStart(2, '0');
+    minutesEl.textContent = String(m).padStart(2, '0');
+    secondsEl.textContent = String(s).padStart(2, '0');
+
+    if (s !== lastSeconds) { triggerTick(secondsEl); lastSeconds = s; }
+
+    container.classList.remove('warning', 'critical');
+    if (remaining <= config.criticalAt) container.classList.add('critical');
+    else if (remaining <= config.warningAt) container.classList.add('warning');
+
+    remaining--;
+    setTimeout(updateTimer, 1000);
+  }
+
+  updateTimer();
+</script>
+</body>
+</html>

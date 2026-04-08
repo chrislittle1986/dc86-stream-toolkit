@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <title>DC86 Now Playing</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Cinzel:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --arcane-purple: #a855f7;
+      --arcane-deep:   #7c3aed;
+      --arcane-glow:   #c084fc;
+      --arcane-dark:   #0d0010;
+      --arcane-mid:    #1a0030;
+      --gold:          #f0c040;
+      --gold-dim:      #c09020;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: transparent;
+      overflow: hidden;
+      font-family: 'Cinzel', serif;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    /* ── Wrapper unten links ── */
+    #np-root {
+      position: fixed;
+      bottom: 24px;
+      left: 24px;
+      width: 340px;
+    }
+
+    /* ── Card ── */
+    .np-card {
+      opacity: 0;
+      transform: translateY(10px) scale(0.97);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+      pointer-events: none;
+      text-decoration: none;
+      display: block;
+    }
+
+    .np-card.visible {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      pointer-events: auto;
+      cursor: pointer;
+    }
+
+    .card-inner {
+      background: linear-gradient(135deg, rgba(13,0,16,0.92) 0%, rgba(26,0,48,0.92) 100%);
+      border: 1px solid var(--arcane-purple);
+      border-radius: 10px;
+      padding: 12px 14px;
+      box-shadow:
+        0 0 16px rgba(168, 85, 247, 0.45),
+        0 0 40px rgba(168, 85, 247, 0.15),
+        inset 0 0 20px rgba(168, 85, 247, 0.04);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* Goldlinie oben */
+    .card-inner::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 10%; right: 10%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--gold-dim), transparent);
+    }
+
+    /* Runen Hintergrund */
+    .card-inner::before {
+      content: 'ᚹ ᛟ ᚷ ᛈ ᚱ ᛉ';
+      position: absolute;
+      bottom: 4px; right: 8px;
+      font-size: 9px;
+      letter-spacing: 3px;
+      color: rgba(168, 85, 247, 0.2);
+      pointer-events: none;
+    }
+
+    /* ── Thumbnail ── */
+    .np-thumb {
+      width: 52px;
+      height: 52px;
+      border-radius: 6px;
+      object-fit: cover;
+      border: 1px solid rgba(168, 85, 247, 0.4);
+      flex-shrink: 0;
+      background: rgba(168, 85, 247, 0.1);
+    }
+
+    .np-thumb-placeholder {
+      width: 52px;
+      height: 52px;
+      border-radius: 6px;
+      border: 1px solid rgba(168, 85, 247, 0.4);
+      flex-shrink: 0;
+      background: rgba(168, 85, 247, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+    }
+
+    /* ── Text ── */
+    .np-text {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .np-label {
+      font-family: 'Cinzel Decorative', serif;
+      font-size: 9px;
+      letter-spacing: 2px;
+      color: var(--arcane-glow);
+      text-transform: uppercase;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .np-label::before {
+      content: '♪';
+      font-size: 11px;
+    }
+
+    .np-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: #e2e8f0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-shadow: 0 0 8px rgba(168,85,247,0.4);
+      margin-bottom: 3px;
+    }
+
+    .np-author {
+      font-size: 10px;
+      color: rgba(240, 192, 64, 0.7);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .np-hint {
+      font-size: 9px;
+      color: rgba(168, 85, 247, 0.5);
+      margin-top: 3px;
+      letter-spacing: 0.5px;
+    }
+
+    /* ── Glow Pulse ── */
+    @keyframes glowPulse {
+      0%, 100% { box-shadow: 0 0 16px rgba(168,85,247,0.45), 0 0 40px rgba(168,85,247,0.15), inset 0 0 20px rgba(168,85,247,0.04); }
+      50%       { box-shadow: 0 0 24px rgba(168,85,247,0.7),  0 0 60px rgba(168,85,247,0.25), inset 0 0 30px rgba(168,85,247,0.08); }
+    }
+
+    .np-card.visible .card-inner {
+      animation: glowPulse 2.5s ease-in-out infinite;
+    }
+
+    /* ── Musikbalken Animation ── */
+    .np-bars {
+      display: flex;
+      align-items: flex-end;
+      gap: 2px;
+      height: 16px;
+      margin-left: 4px;
+    }
+
+    .bar {
+      width: 3px;
+      background: var(--arcane-purple);
+      border-radius: 2px;
+      animation: bounce 1.2s ease-in-out infinite;
+    }
+
+    .bar:nth-child(1) { animation-delay: 0s;    height: 8px; }
+    .bar:nth-child(2) { animation-delay: 0.2s;  height: 14px; }
+    .bar:nth-child(3) { animation-delay: 0.4s;  height: 10px; }
+    .bar:nth-child(4) { animation-delay: 0.1s;  height: 16px; }
+
+    @keyframes bounce {
+      0%, 100% { transform: scaleY(0.5); }
+      50%       { transform: scaleY(1); }
+    }
+  </style>
+</head>
+<body>
+
+<div id="np-root">
+  <a class="np-card" id="npCard" href="#" target="_blank">
+    <div class="card-inner">
+      <div class="np-thumb-placeholder" id="npThumbPlaceholder">🎵</div>
+      <img class="np-thumb" id="npThumb" src="" alt="" style="display:none" />
+      <div class="np-text">
+        <div class="np-label">
+          Now Playing
+          <div class="np-bars">
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+          </div>
+        </div>
+        <div class="np-title" id="npTitle">—</div>
+        <div class="np-author" id="npAuthor"></div>
+        <div class="np-hint">↗ Zum Video</div>
+      </div>
+    </div>
+  </a>
+</div>
+
+<script>
+  // ── Config ──
+  // API_BASE anpassen falls Backend auf anderem Port läuft
+  const API_BASE       = 'http://localhost:8000';
+  const POLL_INTERVAL  = 15000; // alle 15 Sekunden polln
+
+  const card       = document.getElementById('npCard');
+  const titleEl    = document.getElementById('npTitle');
+  const authorEl   = document.getElementById('npAuthor');
+  const thumbEl    = document.getElementById('npThumb');
+  const thumbPlaceholder = document.getElementById('npThumbPlaceholder');
+
+  let currentUrl = null;
+
+  async function fetchNowPlaying() {
+    try {
+      const res  = await fetch(`${API_BASE}/api/music/current`);
+      const data = await res.json();
+
+      if (!data.active) {
+        // Nichts läuft → Card ausblenden
+        card.classList.remove('visible');
+        currentUrl = null;
+        return;
+      }
+
+      // Daten setzen
+      titleEl.textContent  = data.title  || '—';
+      authorEl.textContent = data.author || '';
+      card.href            = data.url    || '#';
+
+      // Thumbnail
+      if (data.thumbnail) {
+        thumbEl.src = data.thumbnail;
+        thumbEl.style.display    = 'block';
+        thumbPlaceholder.style.display = 'none';
+      } else {
+        thumbEl.style.display    = 'none';
+        thumbPlaceholder.style.display = 'flex';
+      }
+
+      card.classList.add('visible');
+      currentUrl = data.url;
+
+    } catch (err) {
+      console.log('Now Playing API nicht erreichbar:', err);
+      card.classList.remove('visible');
+    }
+  }
+
+  // Initial + Polling
+  fetchNowPlaying();
+  setInterval(fetchNowPlaying, POLL_INTERVAL);
+</script>
+
+</body>
+</html>

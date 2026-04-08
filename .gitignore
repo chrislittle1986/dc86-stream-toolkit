@@ -1,0 +1,31 @@
+# ── Environment ──
+.env
+*.env.local
+
+# ── Python ──
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# ── Node ──
+node_modules/
+dist/
+.vite/
+
+# ── Docker ──
+*.log
+
+# ── IDE ──
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── OS ──
+.DS_Store
+Thumbs.db
+
+# ── DC86 CLI ──
+.dc86/

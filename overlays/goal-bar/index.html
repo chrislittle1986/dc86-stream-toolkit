@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>DC86 Goal Bar</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: transparent;
+      font-family: 'Segoe UI', 'Arial', sans-serif;
+      overflow: hidden;
+    }
+
+    .goal-container {
+      width: 500px;
+      padding: 12px 16px;
+      background: rgba(15, 15, 20, 0.85);
+      border-radius: 12px;
+      border: 1px solid rgba(145, 70, 255, 0.3);
+      backdrop-filter: blur(10px);
+    }
+
+    .goal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .goal-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #e0e0e0;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .goal-count {
+      font-size: 15px;
+      font-weight: 700;
+      color: #9146FF;
+    }
+
+    .goal-count .current {
+      color: #00C8AF;
+      font-size: 20px;
+    }
+
+    .bar-track {
+      width: 100%;
+      height: 24px;
+      background: rgba(58, 58, 68, 0.6);
+      border-radius: 12px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: 12px;
+      background: linear-gradient(90deg, #6441A5, #9146FF, #00C8AF);
+      background-size: 200% 100%;
+      animation: shimmer 3s ease-in-out infinite;
+      transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      min-width: 0%;
+    }
+
+    .bar-fill::after {
+      content: '';
+      position: absolute;
+      right: 0;
+      top: 0;
+      height: 100%;
+      width: 20px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3));
+      border-radius: 0 12px 12px 0;
+    }
+
+    .bar-fill.complete {
+      background: linear-gradient(90deg, #00C8AF, #00E5C7, #00C8AF);
+      animation: shimmer 1.5s ease-in-out infinite, celebrate 0.5s ease-in-out;
+    }
+
+    .bar-percent {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 11px;
+      font-weight: 700;
+      color: white;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+    }
+
+    .milestone-markers {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 4px;
+      padding: 0 2px;
+    }
+
+    .milestone {
+      font-size: 10px;
+      color: rgba(255,255,255,0.3);
+    }
+
+    .milestone.passed {
+      color: #00C8AF;
+    }
+
+    /* ── Animations ── */
+    @keyframes shimmer {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    @keyframes celebrate {
+      0% { transform: scaleY(1); }
+      50% { transform: scaleY(1.15); }
+      100% { transform: scaleY(1); }
+    }
+
+    /* ── New follower/sub flash ── */
+    .flash {
+      animation: flash-glow 1s ease-out;
+    }
+
+    @keyframes flash-glow {
+      0% { box-shadow: 0 0 20px rgba(0, 200, 175, 0.8); }
+      100% { box-shadow: none; }
+    }
+
+    /* ── Entrance animation ── */
+    .goal-container {
+      animation: slideIn 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+<div class="goal-container" id="goalContainer">
+  <div class="goal-header">
+    <span class="goal-label" id="goalLabel">⭐ Follower Goal</span>
+    <span class="goal-count">
+      <span class="current" id="currentCount">0</span>
+      <span> / </span>
+      <span id="goalTarget">100</span>
+    </span>
+  </div>
+  <div class="bar-track">
+    <div class="bar-fill" id="barFill" style="width: 0%">
+      <span class="bar-percent" id="barPercent">0%</span>
+    </div>
+  </div>
+  <div class="milestone-markers" id="milestones"></div>
+</div>
+
+<script>
+  /**
+   * DC86 Goal Bar Widget
+   *
+   * URL Parameter:
+   *   ?label=Follower Goal    - Beschriftung
+   *   ?current=45             - Aktueller Wert
+   *   ?goal=100               - Zielwert
+   *   ?emoji=⭐               - Emoji vor dem Label
+   *   ?milestones=25,50,75    - Meilenstein-Markierungen
+   *   ?api=http://...         - API-Endpoint für Live-Daten
+   *   ?color=purple           - Farbschema: purple, mint, red, gold
+   */
+
+  const params = new URLSearchParams(window.location.search);
+
+  // ── Config ──
+  const config = {
+    label: params.get('label') || 'Follower Goal',
+    emoji: params.get('emoji') || '⭐',
+    current: parseInt(params.get('current')) || 0,
+    goal: parseInt(params.get('goal')) || 100,
+    milestones: params.get('milestones')?.split(',').map(Number) || [25, 50, 75],
+    apiUrl: params.get('api') || null,
+    color: params.get('color') || 'purple',
+    refreshInterval: parseInt(params.get('refresh')) || 30000,
+  };
+
+  // ── Color Schemes ──
+  const colors = {
+    purple: 'linear-gradient(90deg, #6441A5, #9146FF, #00C8AF)',
+    mint: 'linear-gradient(90deg, #00897B, #00C8AF, #00E5C7)',
+    red: 'linear-gradient(90deg, #C62828, #EF5350, #FF8A80)',
+    gold: 'linear-gradient(90deg, #F57F17, #FFD54F, #FFF176)',
+  };
+
+  // ── DOM Elemente ──
+  const labelEl = document.getElementById('goalLabel');
+  const currentEl = document.getElementById('currentCount');
+  const targetEl = document.getElementById('goalTarget');
+  const barFill = document.getElementById('barFill');
+  const barPercent = document.getElementById('barPercent');
+  const container = document.getElementById('goalContainer');
+  const milestonesEl = document.getElementById('milestones');
+
+  // ── Init ──
+  labelEl.textContent = `${config.emoji} ${config.label}`;
+  targetEl.textContent = config.goal;
+
+  if (colors[config.color]) {
+    barFill.style.background = colors[config.color];
+    barFill.style.backgroundSize = '200% 100%';
+  }
+
+  // Milestones rendern
+  function renderMilestones(current) {
+    milestonesEl.innerHTML = '';
+    const allPoints = [0, ...config.milestones, config.goal];
+    allPoints.forEach(point => {
+      const el = document.createElement('span');
+      el.className = `milestone ${current >= point ? 'passed' : ''}`;
+      el.textContent = point;
+      milestonesEl.appendChild(el);
+    });
+  }
+
+  // ── Update Funktion ──
+  let previousValue = 0;
+
+  function updateGoal(current) {
+    const percent = Math.min(100, Math.round((current / config.goal) * 100));
+
+    currentEl.textContent = current;
+    barFill.style.width = `${percent}%`;
+    barPercent.textContent = `${percent}%`;
+
+    // Flash-Effekt bei Erhöhung
+    if (current > previousValue && previousValue > 0) {
+      container.classList.remove('flash');
+      void container.offsetWidth; // Reflow trigger
+      container.classList.add('flash');
+    }
+
+    // Goal erreicht!
+    if (percent >= 100) {
+      barFill.classList.add('complete');
+    } else {
+      barFill.classList.remove('complete');
+    }
+
+    renderMilestones(current);
+    previousValue = current;
+  }
+
+  // ── Initial Update ──
+  updateGoal(config.current);
+
+  // ── API Polling (optional) ──
+  if (config.apiUrl) {
+    async function fetchData() {
+      try {
+        const res = await fetch(config.apiUrl);
+        const data = await res.json();
+        if (data.current !== undefined) {
+          updateGoal(data.current);
+        }
+        if (data.goal !== undefined) {
+          config.goal = data.goal;
+          targetEl.textContent = data.goal;
+        }
+      } catch (err) {
+        console.log('API nicht erreichbar:', err);
+      }
+    }
+    fetchData();
+    setInterval(fetchData, config.refreshInterval);
+  }
+
+  // ── Demo Mode: Klick zum Testen ──
+  if (!config.apiUrl) {
+    document.addEventListener('click', () => {
+      config.current = Math.min(config.goal, config.current + Math.floor(Math.random() * 5) + 1);
+      updateGoal(config.current);
+    });
+  }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,31 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── DC86 Custom Styles ── */
+@layer base {
+  body {
+    @apply bg-dc-darker text-white;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply px-6 py-3 bg-dc-violet hover:bg-dc-purple text-white font-semibold rounded-lg
+           transition-all duration-200 hover:shadow-lg hover:shadow-dc-violet/25;
+  }
+
+  .btn-secondary {
+    @apply px-6 py-3 bg-dc-gray hover:bg-dc-dark text-white font-medium rounded-lg
+           border border-dc-gray hover:border-dc-violet transition-all duration-200;
+  }
+
+  .card {
+    @apply bg-dc-dark rounded-xl border border-dc-gray/50 p-6
+           hover:border-dc-violet/30 transition-all duration-200;
+  }
+
+  .status-dot {
+    @apply w-2.5 h-2.5 rounded-full animate-pulse;
+  }
+}

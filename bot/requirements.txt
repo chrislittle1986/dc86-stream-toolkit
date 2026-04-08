@@ -1,0 +1,11 @@
+# ── Twitch Bot ──
+twitchio==2.10.0
+
+# ── HTTP Client (für Backend-API) ──
+httpx==0.28.1
+
+# ── Config ──
+python-dotenv==1.0.1
+
+# ── Redis (Cooldowns & State) ──
+redis[hiredis]==5.2.1
