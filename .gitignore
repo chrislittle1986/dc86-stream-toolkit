@@ -29,3 +29,8 @@ Thumbs.db
 
 # ── DC86 CLI ──
 .dc86/
+
+# ── Terraform ──
+*.tfstate
+*.tfstate.backup
+.terraform/
