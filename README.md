@@ -55,15 +55,12 @@ Terminal-Tool fuer schnellen Zugriff: `python dc86.py status`, `python dc86.py a
 
 ### 1. Repo klonen
 
-```bash
-git clone https://github.com/DEIN-USERNAME/dc86-stream-toolkit.git
-cd dc86-stream-toolkit
-```
+
 
 ### 2. Twitch App registrieren
 
 Auf [dev.twitch.tv/console/apps](https://dev.twitch.tv/console/apps) eine neue App erstellen:
-- Name: `DC86 Stream Toolkit`
+- Name: ` Stream Toolkit`
 - OAuth Redirect URL: `http://localhost:8000/api/auth/callback`
 - Kategorie: Chat Bot
 - Client-Typ: Vertraulich
