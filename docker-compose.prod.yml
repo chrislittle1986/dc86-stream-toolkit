@@ -1,0 +1,77 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: dc86-db
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: dc86-redis
+    restart: always
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  backend:
+    image: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/dc86-backend:latest
+    container_name: dc86-backend
+    restart: always
+    environment:
+      PYTHONUNBUFFERED: "1"
+      DATABASE_URL: postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+      REDIS_URL: redis://redis:6379/0
+      TWITCH_CLIENT_ID: ${TWITCH_CLIENT_ID}
+      TWITCH_CLIENT_SECRET: ${TWITCH_CLIENT_SECRET}
+      TWITCH_REDIRECT_URI: ${TWITCH_REDIRECT_URI}
+      SECRET_KEY: ${SECRET_KEY}
+      FRONTEND_URL: ${FRONTEND_URL}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  frontend:
+    image: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/dc86-frontend:latest
+    container_name: dc86-frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+  bot:
+    image: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/dc86-bot:latest
+    container_name: dc86-bot
+    restart: always
+    environment:
+      PYTHONUNBUFFERED: "1"
+      TWITCH_BOT_TOKEN: ${TWITCH_BOT_TOKEN}
+      TWITCH_CHANNEL: ${TWITCH_CHANNEL}
+      BOT_PREFIX: ${BOT_PREFIX}
+      REDIS_URL: redis://redis:6379/0
+      API_URL: http://backend:8000
+    depends_on:
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_started
+
+volumes:
+  pgdata:
+  redisdata:
