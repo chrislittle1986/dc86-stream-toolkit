@@ -53,33 +53,27 @@ jobs:
     needs: build-and-push
 
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
-          envs: AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY,AWS_SESSION_TOKEN,AWS_REGION,AWS_ACCOUNT_ID
           script: |
-            aws ecr get-login-password --region $AWS_REGION | \
+            # ECR Login über IAM Role
+            aws ecr get-login-password --region eu-central-1 | \
               docker login --username AWS --password-stdin \
-              $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+              669643924496.dkr.ecr.eu-central-1.amazonaws.com
 
+            # Repo klonen falls noch nicht da
             if [ ! -d "/home/ubuntu/dc86-stream-toolkit" ]; then
               git clone https://github.com/chrislittle1986/dc86-stream-toolkit.git /home/ubuntu/dc86-stream-toolkit
             fi
 
+            # Neuesten Code holen
             cd /home/ubuntu/dc86-stream-toolkit
             git pull origin main
 
+            # Images pullen und starten
             docker compose -f docker-compose.prod.yml pull
             docker compose -f docker-compose.prod.yml up -d
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
-          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
