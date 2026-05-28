@@ -67,8 +67,8 @@ jobs:
             cd /home/ubuntu/dc86-stream-toolkit
             git pull origin main
 
-            aws ecr get-login-password --region eu-central-1 | \
+            aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | \
               docker login --username AWS --password-stdin \
-              669643924496.dkr.ecr.eu-central-1.amazonaws.com && \
+              ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com && \
             docker compose -f docker-compose.prod.yml pull && \
             docker compose -f docker-compose.prod.yml up -d
