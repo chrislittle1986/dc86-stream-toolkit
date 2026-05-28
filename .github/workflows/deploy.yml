@@ -27,19 +27,25 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build & Push Frontend
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
-          docker build -f frontend/Dockerfile.prod -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/dc86-frontend:latest ./frontend
-          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/dc86-frontend:latest
+          docker build -f frontend/Dockerfile.prod -t $REGISTRY/dc86-frontend:latest ./frontend
+          docker push $REGISTRY/dc86-frontend:latest
 
       - name: Build & Push Backend
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
-          docker build -f backend/Dockerfile.prod -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/dc86-backend:latest ./backend
-          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/dc86-backend:latest
+          docker build -f backend/Dockerfile.prod -t $REGISTRY/dc86-backend:latest ./backend
+          docker push $REGISTRY/dc86-backend:latest
 
       - name: Build & Push Bot
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
-          docker build -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/dc86-bot:latest ./bot
-          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/dc86-bot:latest
+          docker build -t $REGISTRY/dc86-bot:latest ./bot
+          docker push $REGISTRY/dc86-bot:latest
 
   deploy:
     name: Deploy auf EC2
@@ -57,27 +63,22 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            # AWS Credentials setzen
             export AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
             export AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
             export AWS_SESSION_TOKEN=${{ secrets.AWS_SESSION_TOKEN }}
             export AWS_DEFAULT_REGION=${{ secrets.AWS_REGION }}
 
-            # ECR Login
             aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | \
               docker login --username AWS --password-stdin \
               ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
 
-            # Projekt klonen falls noch nicht da
             if [ ! -d "/home/ubuntu/dc86-stream-toolkit" ]; then
               git clone https://github.com/chrislittle1986/dc86-stream-toolkit.git /home/ubuntu/dc86-stream-toolkit
             fi
 
-            # Neuesten Code holen
             cd /home/ubuntu/dc86-stream-toolkit
             git pull origin main
 
-            # .env anlegen
             cat > .env << 'ENVFILE'
             DB_USER=${{ secrets.DB_USER }}
             DB_PASSWORD=${{ secrets.DB_PASSWORD }}
@@ -94,6 +95,5 @@ jobs:
             AWS_REGION=${{ secrets.AWS_REGION }}
             ENVFILE
 
-            # Images pullen und starten
             docker-compose -f docker-compose.prod.yml pull
             docker-compose -f docker-compose.prod.yml up -d
