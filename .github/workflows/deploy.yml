@@ -62,15 +62,11 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
+          envs: AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY,AWS_SESSION_TOKEN,AWS_REGION,AWS_ACCOUNT_ID
           script: |
-            export AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
-            export AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
-            export AWS_SESSION_TOKEN=${{ secrets.AWS_SESSION_TOKEN }}
-            export AWS_DEFAULT_REGION=${{ secrets.AWS_REGION }}
-
-            aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | \
+            aws ecr get-login-password --region $AWS_REGION | \
               docker login --username AWS --password-stdin \
-              ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+              $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
 
             if [ ! -d "/home/ubuntu/dc86-stream-toolkit" ]; then
               git clone https://github.com/chrislittle1986/dc86-stream-toolkit.git /home/ubuntu/dc86-stream-toolkit
@@ -79,21 +75,11 @@ jobs:
             cd /home/ubuntu/dc86-stream-toolkit
             git pull origin main
 
-            cat > .env << 'ENVFILE'
-            DB_USER=${{ secrets.DB_USER }}
-            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
-            DB_NAME=${{ secrets.DB_NAME }}
-            TWITCH_CLIENT_ID=${{ secrets.TWITCH_CLIENT_ID }}
-            TWITCH_CLIENT_SECRET=${{ secrets.TWITCH_CLIENT_SECRET }}
-            TWITCH_REDIRECT_URI=${{ secrets.TWITCH_REDIRECT_URI }}
-            SECRET_KEY=${{ secrets.SECRET_KEY }}
-            FRONTEND_URL=${{ secrets.FRONTEND_URL }}
-            TWITCH_BOT_TOKEN=${{ secrets.TWITCH_BOT_TOKEN }}
-            TWITCH_CHANNEL=${{ secrets.TWITCH_CHANNEL }}
-            BOT_PREFIX=!
-            AWS_ACCOUNT_ID=${{ secrets.AWS_ACCOUNT_ID }}
-            AWS_REGION=${{ secrets.AWS_REGION }}
-            ENVFILE
-
-            docker-compose -f docker-compose.prod.yml pull
-            docker-compose -f docker-compose.prod.yml up -d
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml up -d
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
