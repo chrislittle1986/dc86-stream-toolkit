@@ -30,7 +30,9 @@ jobs:
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
-          docker build -f frontend/Dockerfile.prod -t $REGISTRY/dc86-frontend:latest ./frontend
+          docker build -f frontend/Dockerfile.prod \
+            --build-arg VITE_API_URL=https://dc86toolkit.duckdns.org \
+            -t $REGISTRY/dc86-frontend:latest ./frontend
           docker push $REGISTRY/dc86-frontend:latest
 
       - name: Build & Push Backend
@@ -67,8 +69,8 @@ jobs:
             cd /home/ubuntu/dc86-stream-toolkit
             git pull origin main
 
-            aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | \
+            aws ecr get-login-password --region eu-central-1 | \
               docker login --username AWS --password-stdin \
-              ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com && \
+              ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-central-1.amazonaws.com && \
             docker compose -f docker-compose.prod.yml pull && \
             docker compose -f docker-compose.prod.yml up -d
