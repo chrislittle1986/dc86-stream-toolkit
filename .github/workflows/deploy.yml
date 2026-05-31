@@ -30,7 +30,7 @@ jobs:
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
-          docker build -f frontend/Dockerfile.prod \
+          docker build --no-cache -f frontend/Dockerfile.prod \
             --build-arg VITE_API_URL=https://dc86toolkit.duckdns.org \
             -t $REGISTRY/dc86-frontend:latest ./frontend
           docker push $REGISTRY/dc86-frontend:latest
