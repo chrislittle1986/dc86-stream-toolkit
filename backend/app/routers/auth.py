@@ -92,6 +92,13 @@ async def callback(
             detail="Twitch-User nicht gefunden",
         )
 
+    # ── Zugriffskontrolle: nur derchrist86 erlaubt ──
+    if twitch_user["login"].lower() != "derchrist86":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Zugriff verweigert - dieses Tool ist privat.",
+        )
+
     # ── User in DB anlegen oder aktualisieren ──
     result = await db.execute(
         select(User).where(User.twitch_id == twitch_user["id"])
