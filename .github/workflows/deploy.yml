@@ -39,7 +39,8 @@ jobs:
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
-          docker build -f backend/Dockerfile.prod -t $REGISTRY/dc86-backend:latest ./backend
+          docker build --no-cache -f backend/Dockerfile.prod \
+            -t $REGISTRY/dc86-backend:latest .
           docker push $REGISTRY/dc86-backend:latest
 
       - name: Build & Push Bot

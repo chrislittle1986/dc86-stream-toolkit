@@ -12,7 +12,10 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # App-Code
-COPY . .
+COPY backend/app ./app
+
+# Overlays kopieren
+COPY overlays ./overlays
 
 # Production: kein --reload, mehrere Worker
 CMD ["uvicorn", "app.main:app", \
