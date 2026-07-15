@@ -59,7 +59,7 @@ class DC86Bot(commands.Bot):
             self.redis = None
 
         # Cogs laden
-        cogs = ["cogs.basic", "cogs.wow_games", "cogs.moderation", "cogs.alerts"]
+        cogs = ["cogs.basic", "cogs.wow_games", "cogs.moderation", "cogs.alerts", "cogs.greetings"]
         for cog in cogs:
             try:
                 self.load_module(cog)

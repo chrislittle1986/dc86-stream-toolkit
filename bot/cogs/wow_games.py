@@ -130,15 +130,19 @@ class WoWGames(commands.Cog):
         options = question["options"].copy()
         random.shuffle(options)
 
+        # Index der richtigen Antwort in den (gemischten) Optionen finden
+        correct_index = options.index(question["a"])
+
         self.active_quiz = {
-            "answer": question["a"].lower(),
+            "answer": question["a"].strip().lower(),
+            "answer_number": str(correct_index + 1),
             "started_by": ctx.author.name,
             "time": time.time(),
         }
 
         options_str = " | ".join(f"{i+1}. {o}" for i, o in enumerate(options))
         await ctx.send(f"❓ WoW-Quiz! {question['q']}")
-        await ctx.send(f"📝 {options_str} — Antworte mit der Antwort im Chat! (30s)")
+        await ctx.send(f"📝 {options_str} — Antworte mit der Zahl oder der Antwort im Chat! (30s)")
 
         # Timeout nach 30 Sekunden
         await asyncio.sleep(30)
@@ -152,7 +156,9 @@ class WoWGames(commands.Cog):
         if not self.active_quiz or message.echo:
             return
 
-        if message.content.lower().strip() == self.active_quiz["answer"]:
+        guess = message.content.strip().lower()
+
+        if guess == self.active_quiz["answer"] or guess == self.active_quiz["answer_number"]:
             winner = message.author.name
             elapsed = time.time() - self.active_quiz["time"]
             gold_reward = max(10, 50 - int(elapsed))  # Schneller = mehr Gold
