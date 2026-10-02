@@ -9,3 +9,5 @@ python-dotenv==1.0.1
 
 # ── Redis (Cooldowns & State) ──
 redis[hiredis]==5.2.1
+
+rapidfuzz

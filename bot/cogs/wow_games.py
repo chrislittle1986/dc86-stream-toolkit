@@ -8,6 +8,10 @@ import random
 import asyncio
 import time
 from twitchio.ext import commands
+from rapidfuzz import fuzz
+
+# Ab diesem Ähnlichkeits-Wert (0-100) gilt eine Antwort als "richtig"
+QUIZ_MATCH_THRESHOLD = 82
 
 
 # ── WoW Quiz-Fragen ──
@@ -157,8 +161,20 @@ class WoWGames(commands.Cog):
             return
 
         guess = message.content.strip().lower()
+        answer = self.active_quiz["answer"]
 
-        if guess == self.active_quiz["answer"] or guess == self.active_quiz["answer_number"]:
+        # Zahl exakt prüfen (z.B. "2"), Text-Antwort fuzzy prüfen
+        # (fängt Tippfehler, Satzzeichen und Teilantworten ab, z.B.
+        # "Zwerge!" oder "geddon" für "Baron Geddon & Garr")
+        is_correct = (
+            guess == self.active_quiz["answer_number"]
+            or (
+                len(guess) >= 3
+                and fuzz.partial_ratio(guess, answer) >= QUIZ_MATCH_THRESHOLD
+            )
+        )
+
+        if is_correct:
             winner = message.author.name
             elapsed = time.time() - self.active_quiz["time"]
             gold_reward = max(10, 50 - int(elapsed))  # Schneller = mehr Gold

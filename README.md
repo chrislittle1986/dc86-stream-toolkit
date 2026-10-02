@@ -1,10 +1,10 @@
 # DC86 Stream Toolkit
 
-Mein eigenes Stream-Management-Toolkit fuer Twitch. Komplett selbst gebaut mit React, FastAPI, Python und Docker — und deployed auf AWS.
+Mein eigenes Stream-Management-Toolkit fuer Twitch. Komplett selbst gebaut mit React, FastAPI, Python und Docker.
 
-Das Ding kann alles was ich zum Streamen brauch — Dashboard, Chat-Bot mit WoW Mini-Games, OBS Overlays und mehr. Alles laeuft in Docker Containern und startet automatisch.
+Das Ding kann alles was ich zum Streamen brauch — Dashboard, Chat-Bot mit WoW Mini-Games, OBS Overlays, Monitoring und mehr. Alles laeuft in Docker Containern und startet automatisch.
 
-**Live:** https://dc86toolkit.duckdns.org
+> War urspruenglich live auf AWS deployed (Capstone-Projekt meiner IT-Weiterbildung), lief ueber eine Schul-Sandbox. Der Zugriff ist seit Trainingsende weg, daher laeuft das Toolkit aktuell lokal. Infrastruktur-Code (Terraform, CI/CD) ist trotzdem noch im Repo.
 
 ---
 
@@ -21,6 +21,11 @@ Custom Bot der in meinem Chat sitzt und auf Commands reagiert. Das Highlight: ei
 **WoW Mini-Games:** `!loot` (zufaelliger WoW-Loot von grau bis legendaer), `!quiz` (WoW-Trivia), `!duel @name 50` (PvP mit Wetteinsatz), `!gamble` (Gold setzen), `!gold` (Balance checken), `!give` (Gold verschenken), `!leaderboard` (Top 5)
 
 **Moderation:** `!permit` `!linkprotection` `!capsprotection` `!title` `!greet`
+
+### Monitoring
+Der Bot schreibt alle 30 Sekunden einen Heartbeat nach Redis. Ein zentraler `/health`-Endpoint im Backend prueft Datenbank, Redis und diesen Heartbeat und meldet 503, sobald der Bot laenger als 90 Sekunden (3 verpasste Intervalle) nichts mehr von sich hoeren laesst — nutzbar fuer externes Monitoring (z.B. Uptime-Kuma, Prometheus).
+
+Im Dashboard zeigt ein pulsierender Status-Punkt in der Navbar auf einen Blick, ob der Bot gerade online ist — unabhaengig vom eingeloggten User, dauerhaft sichtbar auf jeder Seite.
 
 ### OBS Overlays
 Vier Browser-Source Widgets fuer OBS die ueber URL-Parameter konfiguriert werden:
@@ -43,40 +48,13 @@ Terminal-Tool fuer schnellen Zugriff: `python dc86.py status`, `python dc86.py a
 | Backend | FastAPI (Python) |
 | Chat-Bot | twitchio (Python) |
 | Datenbank | PostgreSQL |
-| Cache | Redis |
+| Cache / Heartbeat | Redis |
 | CLI | Python + httpx |
 | Containerisierung | Docker Compose (6 Container) |
-| Infrastruktur | AWS EC2, ECR, IAM (Terraform) |
+| Infrastruktur (Capstone) | AWS EC2, ECR, IAM (Terraform) — aktuell nicht aktiv |
 | CI/CD | GitHub Actions |
 | Reverse Proxy | nginx + Let's Encrypt (HTTPS) |
 | DNS | DuckDNS |
-
----
-
-## AWS Deployment
-
-Das Toolkit laeuft produktiv auf AWS und wird automatisch deployed.
-
-### Infrastruktur (Terraform)
-- **EC2** — Ubuntu 24.04, t2.small, eu-central-1
-- **ECR** — Private Container Registry fuer alle selbst gebauten Images
-- **IAM Role** — EC2 darf ECR lesen ohne Access Keys
-- **Security Groups** — Nur Port 22, 80, 443 offen
-
-### CI/CD Pipeline (GitHub Actions)
-Bei jedem Push auf `main`:
-1. Docker Images bauen (Frontend, Backend, Bot)
-2. Images in ECR pushen
-3. Via SSH auf EC2 deployen
-4. Container neu starten
-
-### OBS Overlays (Production)
-```
-https://dc86toolkit.duckdns.org/api/overlays/goal-bar
-https://dc86toolkit.duckdns.org/api/overlays/timer
-https://dc86toolkit.duckdns.org/api/overlays/alerts
-https://dc86toolkit.duckdns.org/api/overlays/now-playing
-```
 
 ---
 
@@ -120,60 +98,54 @@ Das wars. Alle Container starten automatisch:
 - **Frontend:** localhost:5173
 - **Backend API:** localhost:8000
 - **API Docs:** localhost:8000/docs
+- **Health-Check:** localhost:8000/health
 - **Overlays:** localhost:8000/api/overlays
 
 ### 5. OBS Overlays einbinden (lokal)
 
 In OBS: Quellen > + > Browser, dann eine der URLs einfuegen:
-
-```
 http://localhost:8000/api/overlays/now-playing?game=World%20of%20Warcraft&channel=derchrist86
 http://localhost:8000/api/overlays/goal-bar?label=Follower%20Goal&current=10&goal=50&emoji=⭐
 http://localhost:8000/api/overlays/timer?minutes=10&label=Stream%20startet%20in
 http://localhost:8000/api/overlays/alerts?duration=5000
-```
-
----
 
 ## Projektstruktur
-
-```
 dc86-stream-toolkit/
-├── .github/workflows/    # GitHub Actions CI/CD
-├── terraform/            # AWS Infrastruktur als Code
-├── docker-compose.yml         # Lokal
-├── docker-compose.prod.yml    # Production (AWS)
-├── nginx/                # Reverse Proxy Config
+├── .github/workflows/ # GitHub Actions CI/CD
+├── terraform/ # AWS Infrastruktur als Code (Capstone, aktuell inaktiv)
+├── docker-compose.yml # Lokal
+├── docker-compose.prod.yml # Production (AWS)
+├── nginx/ # Reverse Proxy Config
 ├── .env.example
-├── backend/              # FastAPI Backend
-│   ├── app/
-│   │   ├── main.py
-│   │   ├── config.py
-│   │   ├── database.py
-│   │   ├── routers/      # Auth, Channel, Status, Overlays
-│   │   ├── models/       # User Model
-│   │   └── services/     # Twitch API, JWT Auth
-│   ├── Dockerfile
-│   └── Dockerfile.prod
-├── frontend/             # React + Tailwind
-│   ├── src/
-│   │   ├── components/
-│   │   ├── pages/        # Home, Dashboard, Overlays, Status
-│   │   └── hooks/        # Auth Hook
-│   ├── Dockerfile
-│   └── Dockerfile.prod
-├── bot/                  # Twitch Chat-Bot
-│   ├── bot.py
-│   ├── cogs/             # Basic, WoW Games, Moderation, Alerts
-│   └── Dockerfile
-├── cli/                  # CLI Tool
-│   └── dc86.py
-└── overlays/             # OBS Browser-Source Widgets
-    ├── goal-bar/
-    ├── timer/
-    ├── alerts/
-    └── now-playing/
-```
+├── backend/ # FastAPI Backend
+│ ├── app/
+│ │ ├── main.py
+│ │ ├── config.py
+│ │ ├── database.py
+│ │ ├── routers/ # Auth, Channel, Status, Overlays, Health
+│ │ ├── models/ # User Model
+│ │ └── services/ # Twitch API, JWT Auth
+│ ├── Dockerfile
+│ └── Dockerfile.prod
+├── frontend/ # React + Tailwind
+│ ├── src/
+│ │ ├── components/ # Navbar, BotStatusDot, NowPlayingPanel, ...
+│ │ ├── pages/ # Home, Dashboard, Overlays, Status
+│ │ └── hooks/ # useAuth, useBotStatus
+│ ├── Dockerfile
+│ └── Dockerfile.prod
+├── bot/ # Twitch Chat-Bot
+│ ├── bot.py # inkl. Heartbeat-Routine
+│ ├── cogs/ # Basic, WoW Games, Moderation, Alerts
+│ └── Dockerfile
+├── cli/ # CLI Tool
+│ └── dc86.py
+└── overlays/ # OBS Browser-Source Widgets
+├── goal-bar/
+├── timer/
+├── alerts/
+└── now-playing/
+
 
 ---
 
@@ -187,7 +159,10 @@ docker compose ps             # Status checken
 docker logs dc86-bot          # Bot-Logs anschauen
 docker compose restart bot    # Nur Bot neustarten
 
-# Production (auf EC2)
+# Health-Check manuell pruefen
+curl localhost:8000/health
+
+# Production (auf EC2, aktuell inaktiv)
 docker compose -f docker-compose.prod.yml up -d
 docker compose -f docker-compose.prod.yml logs -f
 ```
@@ -200,9 +175,10 @@ docker compose -f docker-compose.prod.yml logs -f
 - [x] Phase 2 — Chat-Bot (Commands, WoW Games, Moderation)
 - [x] Phase 3 — Stream Dashboard (Live-Controls, Checklist)
 - [x] Phase 4 — OBS Overlays (Goal Bar, Timer, Alerts, Now Playing)
-- [x] Phase 5 — AWS Deployment (EC2, ECR, Terraform, GitHub Actions, HTTPS)
-- [ ] Phase 6 — Clip-Manager (Auto-Clip, Export, Highlights)
+- [x] Phase 5 — AWS Deployment (EC2, ECR, Terraform, GitHub Actions, HTTPS) — Capstone, aktuell inaktiv
+- [x] Phase 6 — Monitoring (Bot-Heartbeat, Health-Check, Status-Anzeige im Dashboard)
+- [ ] Phase 7 — Clip-Manager entfaellt (Twitch bringt das selbst mit)
 
 ---
 
-Gebaut von **derchrist86** — React + FastAPI + Python + Docker + AWS
+Gebaut von **derchrist86** — React + FastAPI + Python + Docker

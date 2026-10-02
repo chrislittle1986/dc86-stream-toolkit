@@ -5,6 +5,7 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { Tv, LogOut, LogIn, Activity, LayoutDashboard, Monitor } from 'lucide-react'
+import BotStatusDot from './BotStatusDot'
 
 export default function Navbar() {
   const { user, isAuthenticated, login, logout } = useAuth()
@@ -48,6 +49,8 @@ export default function Navbar() {
               {navLink('/status', 'Status', Activity)}
             </div>
           )}
+
+          <BotStatusDot />
 
           <div className="flex items-center gap-4">
             {isAuthenticated ? (

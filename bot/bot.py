@@ -6,10 +6,12 @@ Usage:
     python bot.py
 """
 
+from typing import Any
 import os
+import time
 import asyncio
 from dotenv import load_dotenv
-from twitchio.ext import commands
+from twitchio.ext import commands, routines
 import redis.asyncio as aioredis
 
 load_dotenv()
@@ -38,7 +40,7 @@ class DC86Bot(commands.Bot):
         self.api_url = API_URL
         self.channel_name = CHANNEL_NAME
 
-    async def event_ready(self):
+    async def event_ready(self) -> Any:
         """Bot ist verbunden und bereit."""
         print(f"""
 ╔═══════════════════════════════════════════════╗
@@ -59,14 +61,23 @@ class DC86Bot(commands.Bot):
             self.redis = None
 
         # Cogs laden
-        cogs = ["cogs.basic", "cogs.wow_games", "cogs.moderation", "cogs.alerts", "cogs.greetings"]
+        cogs = ["cogs.basic", "cogs.wow_games", "cogs.moderation", "cogs.alerts", "cogs.greetings", "cogs.qa_responses"]
         for cog in cogs:
             try:
                 self.load_module(cog)
                 print(f"✅ Cog geladen: {cog}")
             except Exception as e:
                 print(f"❌ Cog Fehler ({cog}): {e}")
+        # Heartbeat starten, jetzt wo Redis + Cogs bereit sind
+        self.heartbeat.start()
+        print("✅ Heartbeat gestartet (alle 30s)")
 
+    @routines.routine(seconds=30)
+    async def heartbeat(self) -> Any:
+        """Schreibt alle 30s einen Zeitstempel nach Redis, damit Docker weiß: Bot lebt."""
+        if self.redis:
+            await self.redis.set("bot:heartbeat", str(time.time()))
+            
     async def event_message(self, message):
         """Wird bei jeder Chat-Nachricht aufgerufen."""
         # Eigene Nachrichten ignorieren

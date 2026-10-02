@@ -12,6 +12,7 @@ from app.config import get_settings
 from app.database import init_db
 from app.routers.auth import router as auth_router
 from app.routers.status import router as status_router
+from app.routers.health import router as health_router
 from app.routers.channel import router as channel_router
 from app.routers.overlays import router as overlays_router
 from app.routers.music import router as music_router
@@ -62,6 +63,7 @@ app.add_middleware(
 # ── Router einbinden ──
 app.include_router(auth_router)
 app.include_router(status_router)
+app.include_router(health_router)
 app.include_router(channel_router)
 app.include_router(overlays_router)
 app.include_router(music_router)
